@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# 部署文档
+DEPLOY.md
+RAILWAY_DEPLOY.md
+RENDER_DEPLOY.md
+CLOUDBASE_DEPLOY.md
+
+# Node
+node_modules
+npm-debug.log
+
+# 数据库（每次部署时由 db.js 重新创建）
+server/data.db
+server/data.db-wal
+server/data.db-shm
+
+# 上传文件（部署时不携带用户上传的内容）
+server/uploads/*
+!server/uploads/.gitkeep
+
+# 临时文件
+*.tar.gz
+*.log
+.DS_Store
+Thumbs.db

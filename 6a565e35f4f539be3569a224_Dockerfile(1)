@@ -1,0 +1,50 @@
+# ──────────────────────────────────────────────
+# Pickleball Zone — 腾讯云 CloudBase 云托管 Dockerfile
+# ──────────────────────────────────────────────
+
+# 使用官方 Node.js 轻量级镜像（Alpine 体积更小）
+FROM node:22-alpine
+
+# ── 设置时区为中国上海 ──
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
+    apk del tzdata
+
+# ── 安装构建 SQLite 所需的编译工具 ──
+# better-sqlite3 是原生 C++ 模块，需要编译环境
+RUN apk add --no-cache python3 make g++
+
+# ── 创建非 root 用户（安全最佳实践）──
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# ── 设置工作目录 ──
+WORKDIR /app
+
+# ── 先复制依赖文件，利用 Docker 缓存层加速构建 ──
+COPY server/package*.json ./server/
+
+# ── 安装生产依赖（使用腾讯云内网镜像加速）──
+RUN cd server && npm install --omit=dev && npm cache clean --force
+
+# ── 复制后端代码 ──
+COPY server/ ./server/
+
+# ── 复制前端页面、字体、图片等静态资源 ──
+COPY *.html ./
+COPY assets/ ./assets/
+COPY _shared/ ./_shared/
+COPY package.json ./
+
+# ── 创建上传目录并设置权限 ──
+RUN mkdir -p server/uploads && chown -R appuser:appgroup /app
+
+# ── 切换到非 root 用户 ──
+USER appuser
+
+# ── 暴露端口（CloudBase 云托管默认监听 80 端口）──
+# 如果在 CloudBase 控制台设置了其他监听端口，EXPOSE 也要对应修改
+EXPOSE 3000
+
+# ── 启动命令：先初始化数据库，再启动服务器 ──
+CMD ["sh", "-c", "cd server && node db.js && node index.js"]
